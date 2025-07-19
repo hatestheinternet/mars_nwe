@@ -21,6 +21,8 @@
 #define ENV_UNXCOMM    "UNXCOMM"
 
 #ifdef LINUX
+# include <unistd.h>
+# include <string.h>
 # define DEFAULT_COMM   "/pipes/unxcomm"
 #else
 # ifdef  DEFAULT_UNC

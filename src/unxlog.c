@@ -24,6 +24,7 @@ void write_utmp(int dologin, int connection, int pid,
 #ifndef FREEBSD
   struct utmp loc_ut;
   struct utmp *ut;
+  struct timeval tv;
   int    fd;
   char   buff[200];
   int    found = 0;
@@ -67,7 +68,10 @@ void write_utmp(int dologin, int connection, int pid,
     memset(ut->ut_user, 0, sizeof(ut->ut_user));
     ut->ut_pid = 0;
   }
-  (void)time(&(ut->ut_time));
+  gettimeofday(&tv, NULL);
+  ut->ut_tv.tv_sec=tv.tv_sec;
+  ut->ut_tv.tv_usec=tv.tv_usec;
+
   pututline(ut);
   endutent();
   if (NULL == fn_wtmp) return;

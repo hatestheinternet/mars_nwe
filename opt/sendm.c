@@ -12,6 +12,8 @@
 
 #define ENV_UNXCOMM    "UNXSENDM"
 #ifdef LINUX
+# include <unistd.h>
+# include <string.h>
 # define DEFAULT_COMM   "/pipes/unxsendm"
 # else
 # define DEFAULT_COMM   "p:/unxsendm"

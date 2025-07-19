@@ -182,8 +182,8 @@ static char *buffered=NULL;
       if (mode & 0x10) {
         int l=sprintf(pb, ", errno=%d", errnum);
         pb+=l;
-        if (errnum > 0 && errnum < _sys_nerr)
-          l=sprintf(pb, " (%s)",  _sys_errlist[errnum]);
+	if (errnum > 0)
+	  l=sprintf(pb, " (%s)", strerror(errnum));
       }
       if (!(mode & 2)) {
         char identstr[200];
@@ -209,8 +209,8 @@ static char *buffered=NULL;
       }
       if (mode & 0x10) {
         fprintf(logfile, ", errno=%d", errnum);
-        if (errnum > 0 && errnum < _sys_nerr)
-          fprintf(logfile, " (%s)",  _sys_errlist[errnum]);
+        if (errnum > 0)
+          fprintf(logfile, " (%s)",  strerror(errnum));
       }
       if (!(mode & 2))
         fprintf(logfile, "\n");
@@ -236,7 +236,7 @@ void errorp(int mode, char *what, char *p, ...)
     errnum = -1;
     mode  -= 10;
   }
-  if (errnum >= 0 && errnum < _sys_nerr) errstr = _sys_errlist[errnum];
+  if (errnum >= 0) errstr = strerror(errnum);
   else if (errnum > -1)
     sprintf(errbuf, "errno=%d", errnum);
   else

@@ -882,7 +882,7 @@ static int build_path( NW_PATH *path,
   if (len > 255) len = 255;
   conn_build_path_fn(vol,
                      path->path,
-                     (only_dir) ? (uint8)NULL
+                     (only_dir) ? NULL
                                 : path->fn,
                      &(path->has_wild),
                      data, len, sizeof(path->fn));

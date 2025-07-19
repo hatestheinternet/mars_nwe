@@ -5,6 +5,7 @@
  */
 
 #include <stdio.h>
+#include <unistd.h>
 #include <fcntl.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -36,7 +37,7 @@ int main(int argc, char *argv[])
     FILE *f;
     char path[MAXARGLEN+200];
     buf[size]='\0';
-    sprintf(path, "/usr/sbin/sendmail %s", buf);
+    sprintf(path, "/usr/bin/sendmail %s", buf);
     f=popen(path, "w");
     if (NULL != f) {
       write(1, "+++++\n", 6);
