@@ -1,0 +1,11 @@
+{
+    "C_Cpp.default.includePath": [
+        "include"
+    ],
+    "files.associations": {
+        "*.module": "php",
+        "*.inc": "php",
+        "ioctl.h": "c",
+        "sockios.h": "c"
+    }
+}
