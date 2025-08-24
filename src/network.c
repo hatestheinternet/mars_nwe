@@ -54,7 +54,7 @@ mars_network_t *mars_network_internal(void) {
 }
 
 int mars_network_init(void) {
-    mars_config_section_t *tst = mars_get_config();
+    mars_config_section_t *tst = mars_config_get_all();
     mars_network_t *net = NULL;
     char *tmp, *ptr;
 

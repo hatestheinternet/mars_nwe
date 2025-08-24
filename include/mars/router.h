@@ -20,12 +20,14 @@
 
 #include <mars/network.h>
 #include <mars/rip.h>
+#include <mars/sap.h>
 
 typedef struct _mars_router_context_t {
     int should_run;
     int running;
 
     mars_router_rip_t rip;
+    mars_router_sap_t sap;
  
     pthread_t thread;
 } _mars_router_context_t;

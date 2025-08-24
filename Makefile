@@ -1,5 +1,5 @@
 CFLAGS=-Iinclude -ggdb -Wall -Werror
-SRCS=src/mars_minwe.c src/config.c src/network.c src/ipx_utils.c src/router.c src/rip.c
+SRCS=src/mars_minwe.c src/config.c src/network.c src/ipx_utils.c src/router.c src/rip.c src/sap.c src/server.c src/bindery.c
 OBJS=$(patsubst %.c, %.o, $(SRCS))
 
 LIBS=-lpthread

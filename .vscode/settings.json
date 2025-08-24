@@ -6,6 +6,7 @@
         "*.module": "php",
         "*.inc": "php",
         "ioctl.h": "c",
-        "sockios.h": "c"
+        "sockios.h": "c",
+        "router.h": "c"
     }
 }

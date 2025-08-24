@@ -56,6 +56,10 @@ extern unsigned char IPX_BROADCAST_NODE[6];
 #define MARS_PRINTF_SIPXP_ADDR sipx->sipx_node[0], sipx->sipx_node[1], sipx->sipx_node[2], sipx->sipx_node[3], sipx->sipx_node[4], sipx->sipx_node[5]
 #endif
 
+#ifndef MARS_PRINTF_NETP_ADDR
+#define MARS_PRINTF_NETP_ADDR net->address[0], net->address[1], net->address[2], net->address[3], net->address[4], net->address[5]
+#endif
+
 /**
  * Resolve an IPX frame type to a string.
  * 

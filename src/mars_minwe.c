@@ -22,6 +22,7 @@
 #include <mars/config.h>
 #include <mars/network.h>
 #include <mars/router.h>
+#include <mars/server.h>
 
 int _mars_main_should_run = 1;
 
@@ -41,16 +42,22 @@ int main(void) {
         goto mars_main_do_exit;
     }
 
+    if( !mars_server_init() ) {
+        ret = 1;
+        goto mars_main_do_exit;
+    }
+
     signal(SIGINT, signal_handler);
 
     mars_router_start();
 
-    printf("main: Ready to work\n");
+    printf("main: I am %s\n", mars_config_server_name());
     while( _mars_main_should_run ) {
         sleep(30);
     }
     
 mars_main_do_exit:
+    mars_server_stop();
     mars_router_stop();
     mars_network_free();
     mars_config_free();

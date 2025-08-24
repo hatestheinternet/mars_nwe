@@ -57,7 +57,7 @@ void mars_config_free();
  * 
  * Basically return _mars_config.
  */
-mars_config_section_t *mars_get_config(void);
+mars_config_section_t *mars_config_get_all(void);
 
 /**
  * Get a string value from a config section.
@@ -85,5 +85,7 @@ int mars_config_is_true(char *what);
 
 uint32_t mars_config_uint32(mars_config_section_t *section, char *key);
 uint32_t mars_config_global_uint32(char *key);
+
+char *mars_config_server_name(void);
 
 #endif

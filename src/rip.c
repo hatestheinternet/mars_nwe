@@ -133,7 +133,8 @@ void mars_router_handle_rip(mars_router_rip_packet_t *packet, int len, struct so
             }
             if( !is_me ) {
                 mars_router_send_rip_resp(sipx);
-                printf("mars_router_handle_rip: Sent response to %02X%02X%02X%02X%02X%02X\n", MARS_PRINTF_SIPXP_ADDR);
+                if( dump_rip )
+                    printf("mars_router_handle_rip: Sent response to %02X%02X%02X%02X%02X%02X\n", MARS_PRINTF_SIPXP_ADDR);
             }
             break;
 

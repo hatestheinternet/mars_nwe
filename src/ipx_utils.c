@@ -210,11 +210,15 @@ int mars_network_remove_ipx(mars_network_t *net) {
         sipx->sipx_type = net->frame;
     
     result = _mars_network_ioctl("mars_network_remove_ipx", SIOCSIFADDR, &id);
+    char *dev = net->devname;
+        if( !dev )
+            dev = "internal";
+
     if( result == 0 ) {
-        printf("mars_network_remove_ipx: Removed %s from %s\n", mars_network_frame_str(net->frame), net->devname);
+        printf("mars_network_remove_ipx: Removed %s from %s\n", mars_network_frame_str(net->frame), dev);
         result = 1;
-    } else {
-        fprintf(stderr,"mars_network_remove_ipx: %s from %s failed: %s\n", mars_network_frame_str(net->frame), net->devname, strerror(errno));
+    } else {       
+        fprintf(stderr,"mars_network_remove_ipx: %s from %s failed: %s\n", mars_network_frame_str(net->frame), dev, strerror(errno));
         result = 0;
     }
 

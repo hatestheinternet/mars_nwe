@@ -15,21 +15,24 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
- #include <stdio.h>
- #include <stdlib.h>
- #include <string.h>
- #include <mars/config.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <ctype.h>
+#include <mars/config.h>
 
- #ifndef MARS_CONFIG_BUFFSZ
- #define MARS_CONFIG_BUFFSZ 8192
- #endif
+#ifndef MARS_CONFIG_BUFFSZ
+#define MARS_CONFIG_BUFFSZ 8192
+#endif
 
- #ifndef MARS_CONFIG_FILE
- #define MARS_CONFIG_FILE "mars_minwe.ini"
- #endif
+#ifndef MARS_CONFIG_FILE
+#define MARS_CONFIG_FILE "mars_minwe.ini"
+#endif
 
- mars_config_section_t *_mars_config = NULL;
- mars_config_section_t *_mars_config_global = NULL;
+mars_config_section_t *_mars_config = NULL;
+mars_config_section_t *_mars_config_global = NULL;
+char *_mars_config_server_name = NULL;
 
 char *mars_util_ltrim(char *what) {
     char *first = what;
@@ -159,9 +162,12 @@ void mars_config_free(void) {
 
         cur = nxt;
     }
+
+    if( _mars_config_server_name )
+        free(_mars_config_server_name);
 }
 
-mars_config_section_t *mars_get_config(void) {
+mars_config_section_t *mars_config_get_all(void) {
     return _mars_config;
 }
 
@@ -196,4 +202,24 @@ char *mars_config_global_str(char *key) {
 
 uint32_t mars_config_global_uint32(char *key) {
     return mars_config_uint32(_mars_config_global, key);
+}
+
+char *mars_config_server_name(void) {
+    if( !_mars_config_server_name ) {
+        if( mars_config_global_str("server_name") ) {
+            _mars_config_server_name = calloc(1,48);
+            strncpy(_mars_config_server_name, mars_config_global_str("server_name"), 47);
+        } else {
+            _mars_config_server_name = calloc(1,48);
+            gethostname(_mars_config_server_name, 47);
+        }
+
+        char *ptr = _mars_config_server_name;
+        while( *ptr ) {
+            *ptr = toupper(*ptr);
+            ptr++;
+        }
+    }
+
+    return _mars_config_server_name;
 }

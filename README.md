@@ -15,10 +15,11 @@ unfortunately, the code base is showing its age.</dd>
 
 ## Differences
 
-### Router
+### RIP 
 
 * Will receive RIP packets from a network and update the kernel route table
 * Will _not_ announce anything other than its internal IPX network
+* Really doesn't understand hops and ticks
 
 ## Configuration
 

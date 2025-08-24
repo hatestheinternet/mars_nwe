@@ -34,17 +34,10 @@
 #include <mars/config.h>
 #include <mars/rip.h>
 
-/*
- * SAP-related things
- */
-typedef struct mars_router_sap_t {
-    int fd;
-} mars_router_sap_t;
-
 _mars_router_context_t _mars_router_ctx;
 
 int mars_router_add_route(uint32_t network, uint8_t gateway[6], uint32_t via) {
-    struct rtentry rt;
+    struct rtentry rt; 
     struct sockaddr_ipx *sr;
     struct sockaddr_ipx *st;
 
@@ -71,10 +64,12 @@ int mars_router_add_route(uint32_t network, uint8_t gateway[6], uint32_t via) {
 
 void *_mars_router_run(void *arg) {
     _mars_router_context_t *ctx = (_mars_router_context_t *)arg;
+
     mars_router_rip_packet_t rip_packet;
+    mars_router_sap_packet_t sap_packet;
 
     int rip_fd = ctx->rip.fd;
-    int sap_fd = 0;
+    int sap_fd = ctx->sap.fd;
     int max_fd = (sap_fd>rip_fd)?sap_fd:rip_fd;
     int res;
 
@@ -91,6 +86,7 @@ void *_mars_router_run(void *arg) {
 
         FD_ZERO(&read_fds);
         FD_SET(rip_fd, &read_fds);
+        FD_SET(sap_fd,&read_fds);
 
         timeout.tv_sec = MARS_ROUTER_SELECT_TIMEOUT;
         timeout.tv_usec = 0;
@@ -100,6 +96,13 @@ void *_mars_router_run(void *arg) {
             if( FD_ISSET(rip_fd, &read_fds) ) {
                 res = recvfrom(rip_fd, &rip_packet, sizeof(rip_packet), 0, (struct sockaddr *)&sipx, &addr_len);
                 mars_router_handle_rip(&rip_packet, res, &sipx);
+                continue;
+            }
+
+            if( FD_ISSET(sap_fd, &read_fds) ) {
+                res = recvfrom(sap_fd, &sap_packet, sizeof(sap_packet), 0, (struct sockaddr *)&sipx, &addr_len);
+                mars_router_handle_sap(&sap_packet, res, &sipx);
+                continue;
             }
         }
 
@@ -113,9 +116,14 @@ int mars_router_start(void) {
     struct sockaddr_ipx sipx;
     mars_network_t *net;
 
-    _mars_router_ctx.rip.dest.sipx_family = AF_IPX;
+    memset(&_mars_router_ctx, 0, sizeof(_mars_router_context_t));
+
+    _mars_router_ctx.rip.dest.sipx_family = _mars_router_ctx.sap.dest.sipx_family = AF_IPX;
     _mars_router_ctx.rip.dest.sipx_type = IPX_RIP_PTYPE;
     _mars_router_ctx.rip.dest.sipx_port = htons(IPX_RIP_PORT);
+
+    _mars_router_ctx.sap.dest.sipx_type = IPX_SAP_PTYPE;
+    _mars_router_ctx.sap.dest.sipx_port = htons(IPX_SAP_PORT);
 
     memset(&sipx, 0, sizeof(sipx));
     sipx.sipx_family = AF_IPX;
@@ -138,6 +146,29 @@ int mars_router_start(void) {
     if( setsockopt(_mars_router_ctx.rip.fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)) == -1 ) {
         fprintf(stderr, "mars_router_start: SO_BROADCAST failed: %s\n", strerror(errno));
         close(_mars_router_ctx.rip.fd);
+        return errno;
+    }
+
+    memset(&sipx, 0, sizeof(sipx));
+    sipx.sipx_family = AF_IPX;
+    memcpy(sipx.sipx_node, IPX_THIS_NODE, sizeof(sipx.sipx_node));
+    sipx.sipx_port = htons(IPX_SAP_PORT);
+    sipx.sipx_type = IPX_SAP_PTYPE;
+
+    if( (_mars_router_ctx.sap.fd = socket(AF_IPX, SOCK_DGRAM, AF_IPX)) < 0 ) {
+        fprintf(stderr, "mars_router_start: SAP socket failed: %s\n", strerror(errno));
+        return errno;
+    }
+
+    if( bind(_mars_router_ctx.sap.fd, (struct sockaddr *)&sipx, sizeof(sipx)) < 0 ) {
+        fprintf(stderr, "mars_router_start: SAP bind failed : %s\n", strerror(errno));
+        close(_mars_router_ctx.sap.fd);
+        return errno;
+    }
+
+    if( setsockopt(_mars_router_ctx.sap.fd, SOL_SOCKET, SO_BROADCAST, &opt, sizeof(opt)) == -1 ) {
+        fprintf(stderr, "mars_router_start: SO_BROADCAST failed: %s\n", strerror(errno));
+        close(_mars_router_ctx.sap.fd);
         return errno;
     }
 
@@ -179,4 +210,7 @@ void mars_router_stop(void) {
 
     if( _mars_router_ctx.rip.fd > 0 )
         close(_mars_router_ctx.rip.fd);
+
+    if( _mars_router_ctx.sap.fd > 0 )
+        close(_mars_router_ctx.sap.fd);
 }
