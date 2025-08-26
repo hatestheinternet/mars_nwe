@@ -43,6 +43,7 @@ void *_mars_server_ncp_run(void *arg) {
                         break;
 
                     case MARS_NCP_OP_SVC_REQ:
+                        mars_server_ncp_service_request(srv, &sipx, buff+2, res-2);
                         break;
 
                     default:

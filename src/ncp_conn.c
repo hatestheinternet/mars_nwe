@@ -59,14 +59,16 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     conn = calloc(1,sizeof(mars_server_connection_t));
     srv->connections[idx++] = conn;
 
-    if( mars_config_is_true(mars_config_global_str("dump_ncp_conn") ) ) {
-        printf("mars_server_ncp_create_connection[%i]: %02X%02X%02X%02X%02X%02X@%08X, Conn:%hu, Task:%i, Seq:%i\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), conn_no, req->task_no, req->sequence);
+    if( mars_config_is_true(mars_config_global_str("dump_ncp") ) ) {
+        printf("mars_server_ncp_create_connection[%i]: %02X%02X%02X%02X%02X%02X@%08X, Conn:%i, Task:%i, Seq:%i\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), idx, req->task_no, req->sequence);
     }
 
     conn->task_number = resp.task_no;
     memcpy(conn->address, sipx->sipx_node, sizeof(sipx->sipx_node));
     conn->network = sipx->sipx_network;
     conn->seq_no = req->sequence;
+    conn->task_number = req->task_no;
+    conn->idx = idx;
 
     memset(&resp, 0, sizeof(mars_server_ncp_connection_response_t));
     resp.type = MARS_NCP_REPLY_SVC;

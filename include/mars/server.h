@@ -38,6 +38,8 @@ typedef struct mars_server_volume_t {
 } mars_server_volume_t;
 
 typedef struct mars_server_connection_t {
+    int idx;
+    
     uint8_t address[6];
     uint32_t network;
 
