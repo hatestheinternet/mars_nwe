@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <mars/config.h>
 #include <mars/server.h>
@@ -84,6 +85,22 @@ int mars_server_config_volume(mars_config_section_t *cfg) {
     return 1;
 }
 
+int mars_server_start(void) {
+    mars_server_t *srv = _mars_servers;
+
+    while( srv ) {
+        switch( srv->type ) {
+            case MARS_SERVER_TYPE_FILE:
+                if( !mars_server_start_ncp(srv) )
+                    return 0;
+                break;
+        }
+        srv = srv->next;
+    }
+
+    return 1;
+}
+
 void mars_server_stop(void) {
     mars_server_t *srv = _mars_servers, *tsrv;
 
@@ -93,6 +110,15 @@ void mars_server_stop(void) {
 
         switch( tsrv->type ) {
             case MARS_SERVER_TYPE_FILE:
+                if( tsrv->running ) {
+                    tsrv->should_run = 0;
+                    printf("mars_server_stop: Waiting for file server to stop\n");
+                    pthread_join(tsrv->thread, NULL);
+                }
+
+                if( tsrv->fd )
+                    close(tsrv->fd);
+
                 mars_server_volume_t *vol = tsrv->volumes, *tmp;
                 while( vol ) {
                     tmp = vol;
@@ -160,7 +186,7 @@ int mars_server_init(void) {
     return ret;
 }
 
-int mars_server_am_a(unsigned short type) {
+int mars_server_am_a(uint16_t type) {
     mars_server_t *srv = _mars_servers;
     while( srv ) {
         if( srv->type == type )

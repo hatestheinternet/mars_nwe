@@ -143,8 +143,7 @@ int mars_network_add_ipx(mars_network_t *net) {
         sipx->sipx_type = IPX_FRAME_NONE;
         sipx->sipx_special = IPX_INTERNAL;
         sipx->sipx_network = htonl(net->network);
-        memcpy(sipx->sipx_node, net->address, sizeof(net->address));
-
+        
         result = _mars_network_ioctl("mars_network_add_ipx", SIOCSIFADDR, &id);
         if( result == 0 ) {
             printf("mars_network_add_ipx: Created internal network\n");

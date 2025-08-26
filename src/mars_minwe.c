@@ -47,6 +47,11 @@ int main(void) {
         goto mars_main_do_exit;
     }
 
+    if( !mars_server_start() ) {
+        ret = 1;
+        goto mars_main_do_exit;
+    }
+
     signal(SIGINT, signal_handler);
 
     mars_router_start();

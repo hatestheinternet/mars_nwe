@@ -44,15 +44,15 @@
  */
 typedef struct mars_router_rip_entry_t {
     uint32_t network __attribute__ ((packed));
-    unsigned short int hops __attribute__ ((packed));
-    unsigned short int ticks __attribute__ ((packed));
+    uint16_t hops __attribute__ ((packed));
+    uint16_t ticks __attribute__ ((packed));
 } mars_router_rip_entry_t;
 
 /**
  * RIP packet received from the network
  */
 typedef struct mars_router_rip_packet_t {
-    unsigned short int operation __attribute__ ((packed));
+    uint16_t operation __attribute__ ((packed));
     mars_router_rip_entry_t entries[IPX_RIP_MAX_ENTRIES];
 } mars_router_rip_packet_t;
 

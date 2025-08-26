@@ -56,27 +56,27 @@ mars_network_t *mars_network_internal(void) {
 int mars_network_init(void) {
     mars_config_section_t *tst = mars_config_get_all();
     mars_network_t *net = NULL;
-    char *tmp, *ptr;
+    char *tmp;//, *ptr;
 
-    int loaded = 0,i;
+    int loaded = 0;//,i;
 
     // TODO Internal Network
     net = calloc(1,sizeof(mars_network_t));
     net->internal = 1;
     net->network = mars_config_global_uint32("internal_net");
 
-    tmp = mars_config_global_str("internal_node");
-    if( !tmp || strlen(tmp) != 12 ) {
-        fprintf(stderr, "mars_network_init: Internal node must be 12 characters\n");
-        free(net);
-        return 0;
-    }
+    // tmp = mars_config_global_str("internal_node");
+    // if( !tmp || strlen(tmp) != 12 ) {
+    //     fprintf(stderr, "mars_network_init: Internal node must be 12 characters\n");
+    //     free(net);
+    //     return 0;
+    // }
 
-    for( ptr=tmp,i=0;i<6;i++ ) {
-        net->address[i] = _mars_network_char_to_val(*ptr++);
-        net->address[i] <<= 4;
-        net->address[i] |= _mars_network_char_to_val(*ptr++);
-    }
+    // for( ptr=tmp,i=0;i<6;i++ ) {
+    //     net->address[i] = _mars_network_char_to_val(*ptr++);
+    //     net->address[i] <<= 4;
+    //     net->address[i] |= _mars_network_char_to_val(*ptr++);
+    // }
 
     if( !mars_network_start(net) ) {
         free(net);

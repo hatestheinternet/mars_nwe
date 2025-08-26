@@ -39,7 +39,7 @@ int mars_router_send_sap_file_response(struct sockaddr_ipx *sipx) {
     _mars_router_ctx.sap.packet.entries[0].network = htonl(net->network);
     _mars_router_ctx.sap.packet.entries[0].hops = htons(1);
     _mars_router_ctx.sap.packet.entries[0].type = htons(MARS_SAP_FILE_SERVER);
-    _mars_router_ctx.sap.packet.entries[0].port = htons(MARS_SERVER_PORT_NCP);
+    _mars_router_ctx.sap.packet.entries[0].port = htons(IPX_NCP_PORT);
     
     if( mars_config_is_true(mars_config_global_str("dump_sap")) ) {
         printf("-----------------------------\n");
@@ -71,11 +71,10 @@ void mars_router_handle_sap(mars_router_sap_packet_t *packet, int len, struct so
                 printf("Server Type: %04X",ntohs(packet->entries[0].type));
             }
             if( mars_server_am_a(ntohs(packet->entries[0].type)) ) {
-                if( dump_sap ) {
+                if( dump_sap )
                     printf(" (me)\n");
 
-                    mars_router_send_sap_file_response(sipx);
-                }
+                mars_router_send_sap_file_response(sipx);
             } else if( dump_sap ) {
                 printf("\n");
             }

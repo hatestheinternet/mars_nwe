@@ -36,16 +36,16 @@
 #define MARS_SAP_FILE_SERVER (4U)
 
 typedef struct mars_router_sap_entry_t {
-    unsigned short int type __attribute__ ((packed));
+    uint16_t type __attribute__ ((packed));
     char name[48];
     uint32_t network __attribute__ ((packed));
     uint8_t node[6];
-    unsigned short int port __attribute__ ((packed));
-    unsigned short int hops __attribute__ ((packed));
+    uint16_t port __attribute__ ((packed));
+    uint16_t hops __attribute__ ((packed));
 } mars_router_sap_entry_t;
 
 typedef struct mars_router_sap_packet_t {
-    unsigned short int operation __attribute__ ((packed));
+    uint16_t operation __attribute__ ((packed));
     mars_router_sap_entry_t entries[7];
 } mars_router_sap_packet_t;
 

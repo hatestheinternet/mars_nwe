@@ -38,7 +38,7 @@ void _mars_router_prepare_rip_req(mars_router_rip_packet_t *packet) {
 void _mars_router_prepare_rip_resp(mars_router_rip_packet_t *packet) {
     memset(packet, 0, sizeof(mars_router_rip_packet_t));
     
-    packet->operation = ntohs(IPX_RIP_OP_RESPONSE);
+    packet->operation = htons(IPX_RIP_OP_RESPONSE);
 }
 
 void mars_router_send_rip_req(uint32_t network) {
