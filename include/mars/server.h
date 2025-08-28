@@ -39,12 +39,16 @@ typedef struct mars_server_volume_t {
 
 typedef struct mars_server_connection_t {
     int idx;
-    
+    time_t last_activity;
+
     uint8_t address[6];
     uint32_t network;
 
     uint8_t seq_no;
     uint8_t task_number;
+
+    uint16_t packet_sz;
+    uint16_t buff_sz;
 } mars_server_connection_t;
 
 typedef struct mars_server_bindery_t {
@@ -58,7 +62,7 @@ typedef struct mars_server_t {
 
     mars_server_volume_t *volumes;
     mars_server_connection_t *connections[MARS_SERVER_MAX_NCP_CONN];
-    pthread_mutex_t session_mtx;
+    pthread_mutex_t conn_mtx;
 
     pthread_t thread;
     int should_run;

@@ -32,7 +32,6 @@ typedef struct mars_server_ncp_connection_response_t {
 } mars_server_ncp_connection_response_t;
 
 int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    // char *ptr = buff;
     mars_server_connection_t *conn;
     mars_server_ncp_connection_request_t *req = (mars_server_ncp_connection_request_t *)buff;
     mars_server_ncp_connection_response_t resp;
@@ -45,6 +44,8 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
         return -1;
     }
 
+    pthread_mutex_lock(&srv->conn_mtx);
+
     for( idx = 0; idx < MARS_SERVER_MAX_NCP_CONN; idx++ ) {
         if( srv->connections[idx] == NULL ) {
             break;
@@ -52,15 +53,19 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     }
 
     if( idx >= MARS_SERVER_MAX_NCP_CONN ) {
+        pthread_mutex_unlock(&srv->conn_mtx);
         fprintf(stderr,"mars_server_ncp_create_connection: Max number of connections (%i) reached!\n", idx);
         return -1;
     }
 
     conn = calloc(1,sizeof(mars_server_connection_t));
+    conn->last_activity = time(0);
     srv->connections[idx++] = conn;
 
+    pthread_mutex_unlock(&srv->conn_mtx);
+
     if( mars_config_is_true(mars_config_global_str("dump_ncp") ) ) {
-        printf("mars_server_ncp_create_connection[%i]: %02X%02X%02X%02X%02X%02X@%08X, Conn:%i, Task:%i, Seq:%i\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), idx, req->task_no, req->sequence);
+        printf("mars_server_ncp_create_connection[%i]: Created connection for %02X%02X%02X%02X%02X%02X@%08X\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
     }
 
     conn->task_number = resp.task_no;
@@ -71,7 +76,7 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     conn->idx = idx;
 
     memset(&resp, 0, sizeof(mars_server_ncp_connection_response_t));
-    resp.type = MARS_NCP_REPLY_SVC;
+    resp.type = MARS_NCP_OP_SVC_RESP;
     resp.task_no = 1;
     resp.seq_no = req->sequence;
     resp.conn_low = idx & 0xFF;
@@ -79,14 +84,9 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     resp.status = 0;
     resp.completion = 0;
 
-    pthread_mutex_lock(&srv->send_mtx);
-
-    res = sendto(srv->fd, (void *)&resp, sizeof(resp), 0, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-
-    pthread_mutex_unlock(&srv->send_mtx);
-
+    res = mars_server_ncp_send(srv, (void *)&resp, sizeof(resp), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
     if( res < 0 ) {
-        fprintf(stderr, "mars_server_ncp_create_connection: %s\n", strerror(errno));
+        fprintf(stderr, "mars_server_ncp_create_connection: %s\n", strerror(res));
         srv->connections[--idx] = NULL;
         free(conn);
         idx = -1;

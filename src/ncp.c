@@ -18,7 +18,7 @@ void *_mars_server_ncp_run(void *arg) {
     struct timeval timeout;
     struct sockaddr_ipx sipx;
     int max_fd, res;
-    uint8_t buff[1500];
+    uint8_t buff[8192];
     socklen_t addr_len = sizeof(sipx);
     uint16_t ncp_type;
 
@@ -43,7 +43,7 @@ void *_mars_server_ncp_run(void *arg) {
                         break;
 
                     case MARS_NCP_OP_SVC_REQ:
-                        mars_server_ncp_service_request(srv, &sipx, buff+2, res-2);
+                        mars_server_handle_ncp(srv, &sipx, buff+2, res-2);
                         break;
 
                     default:
@@ -91,6 +91,31 @@ int mars_server_start_ncp(mars_server_t *srv) {
     pthread_attr_destroy(&attr);
 
     printf("mars_server_start_ncp: Listening on %02X%02X%02X%02X%02X%02X @ %08X\n", MARS_PRINTF_SIPX_ADDR, net->network);
+
+    return 1;
+}
+
+int mars_server_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len) {
+    pthread_mutex_lock(&srv->send_mtx);
+
+    int res = sendto(srv->fd, buff, sz, 0, saddr, len);
+
+    if( res < 0 )
+        res = errno;
+
+    pthread_mutex_unlock(&srv->send_mtx);
+    return res;
+}
+
+int mars_ncp_response_prepare(mars_server_connection_t *conn, void *mem, size_t sz) {
+    memset(mem, 0, sz);
+
+    mars_ncp_response_t *resp = (mars_ncp_response_t *)mem;
+    resp->seq_no = conn->seq_no;
+    resp->type = MARS_NCP_OP_SVC_RESP;
+    resp->task_no = 1;
+    resp->conn_high = (conn->idx >> 8) & 0xFF;
+    resp->conn_low = conn->idx & 0xFF;
 
     return 1;
 }

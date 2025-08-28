@@ -48,6 +48,8 @@ typedef struct mars_network_t {
 extern const unsigned char IPX_THIS_NODE[6];
 extern unsigned char IPX_BROADCAST_NODE[6];
 
+#define MARS_PRINTF_IPX_ADDR "%02X%02X%02X%02X%02X%02X"
+
 #ifndef MARS_PRINTF_SIPX_ADDR
 #define MARS_PRINTF_SIPX_ADDR sipx.sipx_node[0], sipx.sipx_node[1], sipx.sipx_node[2], sipx.sipx_node[3], sipx.sipx_node[4], sipx.sipx_node[5]
 #endif
