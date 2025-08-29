@@ -39,11 +39,11 @@ void *_mars_server_ncp_run(void *arg) {
                 ncp_type = (buff[0] << 8) + buff[1];
                 switch( ncp_type ) {
                     case MARS_NCP_OP_CREATE_CON:
-                        mars_server_ncp_create_connection(srv, &sipx, buff+2, res-2);
+                        mars_ncp_create_connection(srv, &sipx, buff+2, res-2);
                         break;
 
                     case MARS_NCP_OP_SVC_REQ:
-                        mars_server_handle_ncp(srv, &sipx, buff+2, res-2);
+                        mars_ncp_handle(srv, &sipx, buff+2, res-2);
                         break;
 
                     default:
@@ -60,7 +60,7 @@ void *_mars_server_ncp_run(void *arg) {
     return NULL;
 }
 
-int mars_server_start_ncp(mars_server_t *srv) {
+int mars_ncp_start(mars_server_t *srv) {
     mars_network_t *net = mars_network_internal();
     struct sockaddr_ipx sipx;
     
@@ -77,7 +77,7 @@ int mars_server_start_ncp(mars_server_t *srv) {
     }
 
     if( bind(srv->fd, (struct sockaddr *)&sipx, sizeof(sipx)) < 0 ) {
-        fprintf(stderr, "mars_router_start: NCP bind failed : %s\n", strerror(errno));
+        fprintf(stderr, "mars_server_start_ncp: NCP bind failed : %s\n", strerror(errno));
         close(srv->fd);
         return errno;
     }
@@ -95,18 +95,6 @@ int mars_server_start_ncp(mars_server_t *srv) {
     return 1;
 }
 
-int mars_server_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len) {
-    pthread_mutex_lock(&srv->send_mtx);
-
-    int res = sendto(srv->fd, buff, sz, 0, saddr, len);
-
-    if( res < 0 )
-        res = errno;
-
-    pthread_mutex_unlock(&srv->send_mtx);
-    return res;
-}
-
 int mars_ncp_response_prepare(mars_server_connection_t *conn, void *mem, size_t sz) {
     memset(mem, 0, sz);
 
@@ -118,4 +106,16 @@ int mars_ncp_response_prepare(mars_server_connection_t *conn, void *mem, size_t 
     resp->conn_low = conn->idx & 0xFF;
 
     return 1;
+}
+
+int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len) {
+    pthread_mutex_lock(&srv->send_mtx);
+
+    int res = sendto(srv->fd, buff, sz, 0, saddr, len);
+
+    if( res < 0 )
+        res = errno;
+
+    pthread_mutex_unlock(&srv->send_mtx);
+    return res;
 }

@@ -204,7 +204,7 @@ void mars_router_stop(void) {
     if( _mars_router_ctx.running ) {
         _mars_router_ctx.should_run = 0;
 
-        printf("mars_router_refresh: Waiting for router to stop\n");
+        printf("mars_router_stop: Waiting for router to stop\n");
         pthread_join(_mars_router_ctx.thread, NULL);
     }
 

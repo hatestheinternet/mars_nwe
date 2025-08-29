@@ -12,49 +12,121 @@
 #include <mars/server.h>
 #include <mars/ncp.h>
 
-typedef struct mars_server_ncp_connection_request_t {
-    uint8_t sequence;
-    uint8_t conn_low;
-    uint8_t task_no;
-    uint8_t conn_high;
-    uint8_t completion;
-    uint8_t status;
-} mars_server_ncp_connection_request_t;
+#pragma region Function 0x21 - Buffer Size
 
-typedef struct mars_server_ncp_connection_response_t {
-    uint16_t type;
-    uint8_t seq_no;
-    uint8_t conn_low;
-    uint8_t task_no;
-    uint8_t conn_high;
-    uint8_t completion;
-    uint8_t status;
-} mars_server_ncp_connection_response_t;
+typedef struct mars_ncp_buffer_size_request_t {
+    uint8_t size_high;
+    uint8_t size_low;
+} mars_ncp_buffer_size_request_t;
 
-int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+typedef struct mars_ncp_buffer_size_response_t {
+    mars_ncp_response_t resp;
+    uint16_t size __attribute__ ((packed));
+} mars_ncp_buffer_size_response_t;
+
+int mars_ncp_service_buffer_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    mars_ncp_buffer_size_request_t *req = (mars_ncp_buffer_size_request_t *)buff;
+    mars_ncp_buffer_size_response_t resp;
+
+    uint16_t bsz = (req->size_high << 8) + req->size_low;
+    conn->buff_sz = bsz;
+
+    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
+    resp.size = htons(conn->buff_sz);
+
+    if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
+        printf("mars_ncp_service_buffer_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set buffer size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->buff_sz);
+    }
+
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_buffer_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return 1;
+}
+
+#pragma endregion
+
+#pragma region Function 0x61 - Max Packet Size
+
+typedef struct mars_ncp_packet_size_request_t {
+    uint8_t size_high;
+    uint8_t size_low;
+    uint8_t sec_flags;
+} mars_ncp_packet_size_request_t;
+
+typedef struct mars_ncp_packet_size_response_t {
+    mars_ncp_response_t resp;
+    uint16_t size __attribute__ ((packed));
+    uint16_t echo_sock __attribute__ ((packed));
+    uint8_t sec_flag;
+    uint8_t padding[3];
+} mars_ncp_packet_size_response_t;
+
+int mars_ncp_service_packet_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    mars_ncp_packet_size_request_t *req = (mars_ncp_packet_size_request_t *)buff;
+    mars_ncp_packet_size_response_t resp;
+
+    uint16_t psz = (req->size_high << 8) + req->size_low;
+    conn->packet_sz = psz;
+
+    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
+    resp.size = htons(conn->packet_sz);
+    resp.sec_flag = req->sec_flags;
+    resp.echo_sock = htons(0x4002U);
+    resp.padding[0] = 0x20;
+    resp.padding[1] = 0x20;
+    resp.padding[2] = 0x20;
+
+    if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
+        printf("mars_ncp_service_packet_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set packet size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->packet_sz);
+    }
+
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_packet_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return 1;
+}
+
+#pragma endregion
+
+#pragma region Function 0x65 - Packet Burst Mode
+
+
+// TODO Figure this out
+
+int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    mars_ncp_response_t resp;
+    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
+    resp.completion = MARS_NCP_SVC_UNKONWN;
+
+    printf("mars_ncp_service_burst_mode[%i]: " MARS_PRINTF_IPX_ADDR "@%08X has been refused burst mode\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network));
+    
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return 1;
+}
+
+#pragma endregion
+
+int mars_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
     mars_server_connection_t *conn;
-    mars_server_ncp_connection_request_t *req = (mars_server_ncp_connection_request_t *)buff;
-    mars_server_ncp_connection_response_t resp;
+    mars_ncp_request_t *req = (mars_ncp_request_t *)buff;
+    mars_ncp_response_t resp;
     int idx, res;
     
     uint16_t conn_no = (req->conn_high << 8) + req->conn_low;
     
     if( conn_no != 65535 ) {
-        fprintf(stderr,"mars_server_ncp_create_connection: Invalid conn number %hu\n", conn_no);
+        fprintf(stderr,"mars_ncp_create_connection: Invalid conn number %hu\n", conn_no);
         return -1;
     }
 
     pthread_mutex_lock(&srv->conn_mtx);
 
-    for( idx = 0; idx < MARS_SERVER_MAX_NCP_CONN; idx++ ) {
+    for( idx = 0; idx < MARS_SERVER_MAX_CONN; idx++ ) {
         if( srv->connections[idx] == NULL ) {
             break;
         }
     }
 
-    if( idx >= MARS_SERVER_MAX_NCP_CONN ) {
+    if( idx >= MARS_SERVER_MAX_CONN ) {
         pthread_mutex_unlock(&srv->conn_mtx);
-        fprintf(stderr,"mars_server_ncp_create_connection: Max number of connections (%i) reached!\n", idx);
+        fprintf(stderr,"mars_ncp_create_connection: Max number of connections (%i) reached!\n", idx);
         return -1;
     }
 
@@ -65,7 +137,7 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     pthread_mutex_unlock(&srv->conn_mtx);
 
     if( mars_config_is_true(mars_config_global_str("dump_ncp") ) ) {
-        printf("mars_server_ncp_create_connection[%i]: Created connection for %02X%02X%02X%02X%02X%02X@%08X\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
+        printf("mars_ncp_create_connection[%i]: Created connection for %02X%02X%02X%02X%02X%02X@%08X\n", idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
     }
 
     conn->task_number = resp.task_no;
@@ -75,18 +147,10 @@ int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *s
     conn->task_number = req->task_no;
     conn->idx = idx;
 
-    memset(&resp, 0, sizeof(mars_server_ncp_connection_response_t));
-    resp.type = MARS_NCP_OP_SVC_RESP;
-    resp.task_no = 1;
-    resp.seq_no = req->sequence;
-    resp.conn_low = idx & 0xFF;
-    resp.conn_high = (idx >> 8) & 0xFF;
-    resp.status = 0;
-    resp.completion = 0;
-
-    res = mars_server_ncp_send(srv, (void *)&resp, sizeof(resp), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
+    res = mars_ncp_send(srv, (void *)&resp, sizeof(resp), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
     if( res < 0 ) {
-        fprintf(stderr, "mars_server_ncp_create_connection: %s\n", strerror(res));
+        fprintf(stderr, "mars_ncp_create_connection: %s\n", strerror(res));
         srv->connections[--idx] = NULL;
         free(conn);
         idx = -1;

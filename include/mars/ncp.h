@@ -15,6 +15,7 @@
 
 #include <mars/server.h>
 #include <netipx/ipx.h>
+#include <netinet/in.h>
 
 typedef struct mars_ncp_request_t {
     uint8_t sequence;
@@ -38,17 +39,19 @@ typedef struct mars_ncp_response_t {
     uint8_t status;
 } mars_ncp_response_t;
 
-int mars_server_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
-mars_server_connection_t *mars_server_ncp_find_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t task_no, uint8_t seq_no);
-int mars_server_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len);
 
-int mars_server_handle_ncp(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
+int mars_ncp_start(mars_server_t *srv);
+int mars_ncp_handle(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
+
+int mars_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 
 int mars_ncp_response_prepare(mars_server_connection_t *conn, void *resp, size_t sz);
 
-int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
+int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len);
+
 int mars_ncp_service_packet_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 int mars_ncp_service_buffer_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
+int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 
 #endif

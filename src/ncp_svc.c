@@ -34,7 +34,7 @@ mars_server_connection_t *mars_server_ncp_find(mars_server_t *srv, mars_ncp_serv
     return NULL;
 }
 
-int mars_server_handle_ncp(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+int mars_ncp_handle(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
     int ret = 0;
     mars_ncp_service_request_t *req = (mars_ncp_service_request_t *)buff;
     mars_server_connection_t *conn = mars_server_ncp_find(srv, req, sipx);

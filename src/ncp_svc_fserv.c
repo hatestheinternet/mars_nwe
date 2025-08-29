@@ -58,7 +58,7 @@ int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *co
             resp.major = 4;
             resp.minor = 11;
             resp.max_conns = htons(7U);
-            resp.max_volumes = htons(255);
+            resp.max_volumes = htons(MARS_SERVER_MAX_VOLS);
             resp.sft = 0x2;
             resp.tts = 1;
             resp.conn_max_used = 1;
@@ -73,7 +73,7 @@ int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *co
             if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
                 printf("mars_ncp_service_fserv_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X requested file server info\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
             }
-            mars_server_ncp_send(srv, &resp, sizeof(mars_ncp_service_fserv_info_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+            mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_fserv_info_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
             break;
 
         default:
@@ -81,96 +81,6 @@ int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *co
             break;
     }
 
-    return 1;
-}
-
-#pragma endregion
-
-#pragma region Function 0x21 - Buffer Size
-
-typedef struct mars_ncp_buffer_size_request_t {
-    uint8_t size_high;
-    uint8_t size_low;
-} mars_ncp_buffer_size_request_t;
-
-typedef struct mars_ncp_buffer_size_response_t {
-    mars_ncp_response_t resp;
-    uint16_t size __attribute__ ((packed));
-} mars_ncp_buffer_size_response_t;
-
-int mars_ncp_service_buffer_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    mars_ncp_buffer_size_request_t *req = (mars_ncp_buffer_size_request_t *)buff;
-    mars_ncp_buffer_size_response_t resp;
-
-    uint16_t bsz = (req->size_high << 8) + req->size_low;
-    conn->buff_sz = bsz;
-
-    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
-    resp.size = htons(conn->buff_sz);
-
-    if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
-        printf("mars_ncp_service_buffer_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set buffer size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->buff_sz);
-    }
-
-    mars_server_ncp_send(srv, &resp, sizeof(mars_ncp_buffer_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-    return 1;
-}
-
-#pragma endregion
-
-#pragma region Function 0x61 - Max Packet Size
-
-typedef struct mars_ncp_packet_size_request_t {
-    uint8_t size_high;
-    uint8_t size_low;
-    uint8_t sec_flags;
-} mars_ncp_packet_size_request_t;
-
-typedef struct mars_ncp_packet_size_response_t {
-    mars_ncp_response_t resp;
-    uint16_t size __attribute__ ((packed));
-    uint16_t echo_sock __attribute__ ((packed));
-    uint8_t sec_flag;
-    uint8_t padding[3];
-} mars_ncp_packet_size_response_t;
-
-int mars_ncp_service_packet_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    mars_ncp_packet_size_request_t *req = (mars_ncp_packet_size_request_t *)buff;
-    mars_ncp_packet_size_response_t resp;
-
-    uint16_t psz = (req->size_high << 8) + req->size_low;
-    conn->packet_sz = psz;
-
-    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
-    resp.size = htons(conn->packet_sz);
-    resp.sec_flag = req->sec_flags;
-    resp.echo_sock = htons(0x4002U);
-    resp.padding[0] = 0x20;
-    resp.padding[1] = 0x20;
-    resp.padding[2] = 0x20;
-
-    if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
-        printf("mars_ncp_service_packet_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set packet size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->packet_sz);
-    }
-
-    mars_server_ncp_send(srv, &resp, sizeof(mars_ncp_packet_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-    return 1;
-}
-
-#pragma endregion
-
-#pragma region Function 0x65 - Packet Burst Mode
-
-// TODO Figure this out
-
-int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    mars_ncp_response_t resp;
-    mars_ncp_response_prepare(conn, &resp, sizeof(resp));
-    resp.completion = MARS_NCP_SVC_UNKONWN;
-
-    printf("mars_ncp_service_burst_mode[%i]: " MARS_PRINTF_IPX_ADDR "@%08X has been refused burst mode\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network));
-    
-    mars_server_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
     return 1;
 }
 
