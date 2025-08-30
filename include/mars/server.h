@@ -29,6 +29,10 @@
 #define MARS_SERVER_NCP_SELECT 3
 #endif
 
+#ifndef MARS_SERVER_SYS_PATH
+#define MARS_SERVER_SYS_PATH "volumes/SYS"
+#endif
+
 #include <stdint.h>
 #include <pthread.h>
 
@@ -39,6 +43,8 @@ typedef struct mars_server_volume_t {
 
     char *name;
     char *path;
+
+    int is_system;
 
     struct mars_server_volume_t *next;
 } mars_server_volume_t;
@@ -89,5 +95,8 @@ int mars_server_init(void);
 int mars_server_start(void);
 void mars_server_stop(void);
 int mars_server_am_a(uint16_t type);
+
+mars_server_volume_t *mars_server_find_volume(char *name);
+mars_server_volume_t *mars_server_get_volume(int idx);
 
 #endif

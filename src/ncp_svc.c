@@ -7,6 +7,7 @@
 
 #include <mars/server.h>
 #include <mars/ncp.h>
+#include <mars/nds.h>
 
 mars_server_connection_t *mars_server_ncp_find(mars_server_t *srv, mars_ncp_service_request_t *req, struct sockaddr_ipx *sipx) {
     uint16_t idx = (req->req.conn_high << 8) + (req->req.conn_low & 0xFF);
@@ -61,6 +62,21 @@ int mars_ncp_handle(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff
             case MARS_NCP_SVC_BURST_MODE:
                 conn->seq_no = req->req.sequence;
                 ret = mars_ncp_service_burst_mode(srv, conn, sipx, buff+sizeof(mars_ncp_service_request_t), sz-sizeof(mars_ncp_service_request_t));
+                break;
+
+            case MARS_NCP_NDS_SERVER_ADDR:
+                conn->seq_no = req->req.sequence;
+                ret = mars_nds_handle(srv, conn, sipx, buff, sz);
+                break;
+
+            case MARS_NCP_SVC_ENTRY_INFO:
+                conn->seq_no = req->req.sequence;
+                ret = mars_ncp_service_entry_info(srv, conn, sipx, buff, sz);
+                break;
+
+            case MARS_NCP_SVC_DATE_TIME:
+                conn->seq_no = req->req.sequence;
+                ret = mars_ncp_service_date_time(srv, conn, sipx, buff, sz);
                 break;
         }
 

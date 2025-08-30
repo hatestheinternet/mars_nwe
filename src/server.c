@@ -6,6 +6,7 @@
 #include <mars/config.h>
 #include <mars/server.h>
 #include <mars/ncp.h>
+#include <mars/nds.h>
 #include <mars/bindery.h>
 
 mars_server_t *_mars_servers = NULL;
@@ -29,6 +30,23 @@ int mars_server_has_volume(char *name) {
     return 0;
 }
 
+mars_server_volume_t *mars_server_find_volume(char *name) {
+    mars_server_volume_t *ret;
+
+    for( int i=0; i<MARS_SERVER_MAX_VOLS; i++ ) {
+        ret = _mars_server.volumes[i];
+
+        if( ret && strcmp(ret->name, name) == 0 )
+            return ret;
+    }
+
+    return NULL;
+}
+
+mars_server_volume_t *mars_server_get_volume(int idx) {
+    return _mars_server.volumes[idx];
+}
+
 int mars_server_add_volume(mars_server_t *srv, mars_server_volume_t *vol) {
     int idx;
 
@@ -46,11 +64,25 @@ int mars_server_add_volume(mars_server_t *srv, mars_server_volume_t *vol) {
         return -1;
     }
 
-    srv->volumes[idx++] = vol;
     vol->idx = idx;
+    srv->volumes[idx] = vol;
 
     pthread_mutex_unlock(&srv->vol_mtx);
     return idx;
+}
+
+mars_server_volume_t *mars_server_add_volume_ex(mars_server_t *srv, char *name, char *path) {
+    mars_server_volume_t *vol = calloc(1,sizeof(mars_server_volume_t));
+    vol->name = name;
+    vol->path = path;
+    vol->is_system = 1;
+
+    if( mars_server_add_volume(srv, vol) < 0 ) {
+        free(vol);
+        return NULL;
+    }
+
+    return vol;
 }
 
 int mars_server_config_volume(mars_config_section_t *cfg) {
@@ -74,9 +106,11 @@ int mars_server_config_volume(mars_config_section_t *cfg) {
         return 0;
     }
 
+    vol->is_system = mars_config_is_true(mars_config_str(cfg, "is_system"));
+
     // TODO Check if path exists
 
-    if( !mars_server_add_volume(&_mars_server, vol) ) {
+    if( mars_server_add_volume(&_mars_server, vol) < 0 ) {
         free(vol);
         return 0;
     }
@@ -121,6 +155,9 @@ int mars_server_init(void) {
 
     memset(&_mars_server, 0, sizeof(mars_server_t));
 
+    mars_server_volume_t *sysvol = mars_server_add_volume_ex(&_mars_server, "SYS", MARS_SERVER_SYS_PATH);
+    sysvol->is_system = 1;
+
     tst = mars_config_get_all();
     while( tst ) {
         // Are we going to be a file server?
@@ -128,7 +165,7 @@ int mars_server_init(void) {
             name = mars_config_str(tst, "name");
             if( name == NULL ) {
                 fprintf(stderr, "mars_server_init: Volume has no \"name\"\n");
-            } else if( mars_server_has_volume(name) ) {
+            } else if( mars_server_find_volume(name) ) {
                 fprintf(stderr,"mars_server_init: Duplicate volume name \"%s\"\n", name);
             } else {
                 ret = mars_server_config_volume(tst);
@@ -150,6 +187,7 @@ int mars_server_init(void) {
                     ret = 0;
                     break;
                 }
+                ret = 1;
             }
         }
 
