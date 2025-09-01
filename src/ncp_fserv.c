@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
 
@@ -9,130 +10,14 @@
 #include <mars/network.h>
 #include <mars/ncp.h>
 
-#pragma region Function 0x14 - Get server date and time
-
-typedef struct mars_ncp_service_date_time_response_t {
-    mars_ncp_response_t resp;
-
-    uint8_t year;
-    uint8_t month;
-    uint8_t day;
-    uint8_t hour;
-    uint8_t minutes;
-    uint8_t seconds;
-    uint8_t dow;
-    uint8_t twenty;
-} mars_ncp_service_date_time_response_t;
-
-int mars_ncp_service_date_time(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    mars_ncp_service_date_time_response_t resp;
-    mars_ncp_response_prepare(conn, &resp, sizeof(mars_ncp_service_date_time_response_t));
-
-    struct tm *tm;
-    
-    time_t tt = time(0);
-    tm = localtime(&tt);
-
-    resp.year = tm->tm_year;
-    resp.month = tm->tm_mon+1;
-    resp.day = tm->tm_mday;
-    resp.hour = tm->tm_hour;
-    resp.minutes = tm->tm_min;
-    resp.seconds = tm->tm_sec;
-    resp.dow = tm->tm_wday;
-
-    return mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_date_time_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-}
-
-#pragma endregion
-
-#pragma region Function 0x17 - Get Server Info
-
-typedef struct mars_ncp_service_fserv_info_request_t {
-    uint16_t packet_len;
-    uint8_t sub_function;
-} mars_ncp_service_fserv_info_request_t;
-
-typedef struct mars_ncp_service_fserv_info_response_t {
-    mars_ncp_response_t resp;
-    uint8_t server[48];
-    uint8_t major;
-    uint8_t minor;
-    uint16_t max_conns __attribute__ ((packed));
-    uint16_t conns_in_use __attribute__ ((packed));
-    uint16_t max_volumes __attribute__ ((packed));
-    uint8_t os_rev;
-    uint8_t sft;
-    uint8_t tts;
-    uint16_t conn_max_used __attribute__ ((packed));
-    uint8_t ver_acct;
-    uint8_t ver_vap;
-    uint8_t ver_qms;
-    uint8_t ver_print;
-    uint8_t ver_vcons;
-    uint8_t ver_secres;
-    uint8_t ver_ibridge;
-    uint8_t mix_mode_path;
-    uint8_t local_login_info;
-    uint16_t product_major __attribute__ ((packed));
-    uint16_t product_minor __attribute__ ((packed));
-    uint16_t product_rev __attribute__ ((packed));
-    uint8_t os_lang_id;
-    uint8_t sixtyfour;
-    uint8_t stype;
-    uint8_t ktype;
-    uint8_t reserved[48];
-} mars_ncp_service_fserv_info_response_t;
-
-int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
-    mars_ncp_service_fserv_info_request_t *req = (mars_ncp_service_fserv_info_request_t *)buff;
-
-    mars_ncp_service_fserv_info_response_t resp;
-    
-    switch( req->sub_function ) {
-        case 0x11:
-            mars_ncp_response_prepare(conn, &resp, sizeof(resp));
-
-            // Defaults based on how my Netware 4.2 server responds
-            resp.major = 4;
-            resp.minor = 11;
-            resp.max_conns = htons(7U);
-            resp.max_volumes = htons(MARS_SERVER_MAX_VOLS);
-            resp.sft = 0x2;
-            resp.tts = 1;
-            resp.conn_max_used = 1;
-            resp.ver_acct = 1;
-            resp.ver_qms = 1;
-            resp.ver_vap = 1;
-            resp.ver_vcons = 1;
-            resp.ver_secres = 1;
-            resp.ver_ibridge = 1;
-            memcpy(resp.server, mars_config_server_name(), 48);
-
-            if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
-                printf("mars_ncp_service_fserv_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X requested file server info\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
-            }
-            mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_fserv_info_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-            break;
-
-        default:
-            printf("Packet Len = %hu, Subfunc = %02X\n", ntohs(req->packet_len), req->sub_function);
-            break;
-    }
-
-    return 1;
-}
-
-#pragma endregion
-
-#pragma region Function 0x57 - File or Directory Info
-
 typedef enum mars_ncp_entry_search_e {
     NCP_SEARCH_ALLOW_HIDDEN = 2,
     NCP_SEARCH_WANT_SYSTEM = 4,
     NCP_SEARCH_WANT_EXE = 8,
     NCP_SEARCH_WANT_DIR = 16
 } mars_ncp_entry_search_e;
+
+#pragma region Function 0x57:0x06 - File or sub directory info
 
 typedef struct mars_ncp_service_entry_request_t {
     mars_ncp_service_request_t req;
@@ -156,91 +41,211 @@ typedef struct mars_ncp_service_entry_reponse_t {
     uint8_t reserved_mid[38];
 } mars_ncp_service_entry_reponse_t;
 
+int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    uint8_t vol_name[32], path[1024];    
+    mars_ncp_service_entry_request_t *req = (mars_ncp_service_entry_request_t *)buff;
+    mars_server_volume_t *vol;
+    mars_server_volume_dirent_t *dirent;
+    uint8_t *ptr;
+    ptr = buff + sizeof(mars_ncp_service_entry_request_t);
+    unsigned char *ppos = path;
+    
+    memset(&vol_name, 0, sizeof(vol_name));
+    memset(&path, 0, sizeof(path));
+
+    uint8_t pe_sz = *ptr;
+    ptr++;
+
+    memcpy(&vol_name, ptr, pe_sz);
+    ptr += pe_sz;
+
+    vol = mars_server_find_volume((char *)vol_name);
+    if( !vol ) {
+        fprintf(stderr, "mars_ncp_service_entry_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X requested non-existent volume \"%s\"\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), vol_name);
+        return -1;
+    }
+
+    // TODO Not found?
+    if( (req->search_attr & NCP_SEARCH_WANT_SYSTEM) && !vol->is_system ) {
+        fprintf(stderr, "mars_ncp_service_entry_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X \"%s\" is not a system volume\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), vol_name);
+        return -1;
+    }
+
+    memcpy(ppos, vol->path, strlen(vol->path));
+    ppos += strlen(vol->path);
+
+    if( req->path_count > 1 ) {
+        for( int i=0; i<req->path_count-1; i++ ) {
+            *ppos = '/';
+            ppos++;
+            
+            pe_sz = *ptr;
+            memcpy(ppos, ptr+1, pe_sz);
+            ptr += pe_sz + 1;
+        }
+    }
+
+    printf("%s\n", path);
+    struct stat finfo;
+    if( stat((char *)path, &finfo) == -1 ) {
+        return -1;
+    }
+    
+    if( (req->search_attr & NCP_SEARCH_WANT_DIR) && !S_ISDIR(finfo.st_mode) ) {
+        printf("want directory but %s is not\n", path);
+        return -1;
+    }
+    
+    uint8_t dat[4096];
+    mars_ncp_service_entry_reponse_t *resp = (mars_ncp_service_entry_reponse_t *)dat;
+    mars_ncp_response_prepare(conn, resp, sizeof(dat));
+
+    resp->attr_flags = 4;
+
+    if( S_ISDIR(finfo.st_mode) ) {
+        resp->attributes += 16;
+    }
+
+    ptr = dat;
+    ppos = ptr + sizeof(mars_ncp_service_entry_reponse_t);
+
+    char *walk = (char *)path;
+    walk += strlen(vol->path) + 1;
+    dirent = mars_server_dirent_walk(vol, walk);
+    
+    // Directory entry number 12
+    *ppos = dirent->handle & 0xFF;
+    *(ppos+1) = (dirent->handle >> 8) & 0xFF;
+    *(ppos+2) = (dirent->handle >> 16) & 0xFF;
+    *(ppos+3) = (dirent->handle >> 24) & 0xFF;
+    // *ppos = 12;
+    ppos += 4;
+
+    // DOS directory 1?
+    *ppos = 1;
+    ppos += 4;
+
+    *ppos = vol->idx & 0xFF;
+    *(ppos+1) = (vol->idx >> 8) & 0xFF;
+    *(ppos+2) = (vol->idx >> 16) & 0xFF;
+    *(ppos+3) = (vol->idx >> 24) & 0xFF;
+    ppos+=4;
+
+    size_t send_sz = (ppos - ptr) + 20;
+    return mars_ncp_send(srv, ptr, send_sz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+}
+
+#pragma endregion
+
+#pragma region Function 0x57:0x1C - Get full path string
+
+typedef struct mars_ncp_service_path_request_t {
+    mars_ncp_service_request_t req;
+    uint8_t sub_func;
+    uint8_t ns_source;
+    uint8_t ns_dest;
+    uint16_t cookie_flags __attribute__ ((packed));
+    uint32_t cookie_one __attribute__ ((packed));
+    uint32_t cookie_two __attribute__ ((packed));
+    uint8_t vol_no;
+    uint32_t dir_base __attribute__ ((packed));
+    uint8_t dir_handle;
+    uint8_t path_count;
+} mars_ncp_service_path_request_t;
+
+typedef struct mars_ncp_service_path_response_t {
+    mars_ncp_response_t resp;
+    uint16_t path_flags;
+    uint32_t cookie_one __attribute__ ((packed));
+    uint32_t cookie_two __attribute__ ((packed));
+    uint16_t path_sz __attribute__ ((packed));
+    uint16_t path_count __attribute__ ((packed));
+} mars_ncp_service_path_response_t;
+
+int _mars_ncp_service_entry_info_path(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    uint8_t rdat[8192], wpath[1024];
+    uint8_t *ptr;
+    char *tmp, *cptr;
+
+    mars_server_volume_t *vol;
+    mars_server_volume_dirent_t *dirent;
+
+    mars_ncp_service_path_request_t *preq = (mars_ncp_service_path_request_t *)buff;
+    mars_ncp_service_path_response_t *presp = (mars_ncp_service_path_response_t *)rdat;
+    mars_ncp_response_prepare(conn, presp, sizeof(rdat));
+
+    memset(&wpath, 0, sizeof(wpath));
+
+    vol = mars_server_get_volume(preq->vol_no);
+    if( vol == NULL ) {
+        fprintf(stderr, "Request for invalid volume %i\n", preq->vol_no);
+        return -1;
+    }
+    
+    dirent = mars_server_dirent_get(vol, preq->dir_base);
+    if( dirent == NULL ) {
+        fprintf(stderr, "Request for invalid dirent %04X\n", preq->dir_base);
+        return -1;
+    }
+    ptr = wpath;
+
+    memcpy(ptr, vol->name, strlen(vol->name));
+    ptr += strlen(vol->name);
+    *ptr = '/';
+    ptr++;
+
+    presp->cookie_one = 0U;
+    presp->cookie_two = preq->cookie_two;
+
+    presp->path_count = 0;
+    presp->path_sz = 0U;
+
+    ptr = (uint8_t *)presp + sizeof(mars_ncp_service_path_response_t);
+
+    tmp = dirent->netware_path;
+    cptr = strrchr(tmp, '/');
+    while( cptr ) {
+        *cptr = 0;
+
+        printf("Component: %s (%lu)\n", cptr+1, strlen(cptr+1));
+
+        presp->path_sz += strlen(cptr+1) + 1;
+        presp->path_count++;
+
+        *ptr = strlen(cptr+1) & 0xFF;
+        memcpy(ptr+1, cptr+1, strlen(cptr+1)&0xFF);
+        ptr += (strlen(cptr+1)&0xFF) + 1;
+
+        cptr = strrchr(tmp, '/');
+    }
+
+    presp->path_sz += strlen(vol->name)+1;
+    presp->path_count++;
+
+    *ptr = strlen(vol->name) & 0xFF;
+    memcpy(ptr+1, vol->name, strlen(vol->name)&0xFF);
+
+    size_t resp_sendsz = sizeof(mars_ncp_service_path_response_t) + presp->path_sz;
+    int ret = mars_ncp_send(srv, presp, resp_sendsz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    free(tmp);
+    return ret;
+}
+
+#pragma endregion
+
 int mars_ncp_service_entry_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
     mars_ncp_service_entry_request_t *req = (mars_ncp_service_entry_request_t *)buff;
     
     switch( req->sub_func ) {
-        case 6:
-            uint8_t vol_name[32], path[1024];    
-            uint8_t *ptr = buff + sizeof(mars_ncp_service_entry_request_t);
-            unsigned char *ppos = path;
-            
-            memset(&vol_name, 0, sizeof(vol_name));
-            memset(&path, 0, sizeof(path));
 
-            uint8_t pe_sz = *ptr;
-            ptr++;
+        case MARS_NCP_SVC_ENTRY_INFO_FOR:
+            return _mars_ncp_service_entry_info_for(srv, conn, sipx, buff, sz);
+            break;
 
-            memcpy(&vol_name, ptr, pe_sz);
-            ptr += pe_sz;
-
-            mars_server_volume_t *vol = mars_server_find_volume((char *)vol_name);
-            if( !vol ) {
-                fprintf(stderr, "mars_ncp_service_entry_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X requested non-existent volume \"%s\"\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), vol_name);
-                break;
-            }
-
-            // TODO Not found?
-            if( (req->search_attr & NCP_SEARCH_WANT_SYSTEM) && !vol->is_system ) {
-                fprintf(stderr, "mars_ncp_service_entry_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X \"%s\" is not a system volume\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network), vol_name);
-                break;
-            }
-
-            memcpy(ppos, vol->path, strlen(vol->path));
-            ppos += strlen(vol->path);
-
-            if( req->path_count > 1 ) {
-                for( int i=0; i<req->path_count-1; i++ ) {
-                    *ppos = '/';
-                    ppos++;
-                    
-                    pe_sz = *ptr;
-                    memcpy(ppos, ptr+1, pe_sz);
-                    ptr += pe_sz + 1;
-                }
-            }
-
-            struct stat finfo;
-            if( stat((char *)path, &finfo) == -1 ) {
-                break;
-            }
-            
-            if( (req->search_attr & NCP_SEARCH_WANT_DIR) && !S_ISDIR(finfo.st_mode) ) {
-                printf("want directory but %s is not\n", path);
-                break;
-            }
-            
-            uint8_t dat[4096];
-            mars_ncp_service_entry_reponse_t *resp = (mars_ncp_service_entry_reponse_t *)dat;
-            mars_ncp_response_prepare(conn, resp, sizeof(dat));
-
-            resp->attr_flags = 4;
-
-            if( S_ISDIR(finfo.st_mode) ) {
-                resp->attributes += 16;
-            }
-
-            ptr = dat;
-            ppos = ptr + sizeof(mars_ncp_service_entry_reponse_t);
-
-            // Directory entry number 12
-            *ppos = 12;
-            ppos += 4;
-
-            // DOS directory 1?
-            *ppos = 1;
-            ppos += 4;
-
-            *ppos = vol->idx & 0xFF;
-            ppos++;
-
-            size_t send_sz = (ppos - ptr) + 20;
-            return mars_ncp_send(srv, ptr, send_sz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
-
+        case MARS_NCP_SVC_ENTRY_INFO_PATH:
+            return _mars_ncp_service_entry_info_path(srv, conn, sipx, buff, sz);
             break;
     }
 
     return 1;
 }
-
-#pragma endregion

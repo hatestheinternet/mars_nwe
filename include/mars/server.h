@@ -10,11 +10,11 @@
 #endif
 
 #ifndef MARS_SERVER_TYPE_FILE
-#define MARS_SERVER_TYPE_FILE (4U)
+#define MARS_SERVER_TYPE_FILE 4U
 #endif
 
 #ifndef MARS_SERVER_TYPE_DIR
-#define MARS_SERVER_TYPE_DIR (0x278U)
+#define MARS_SERVER_TYPE_DIR 0x278U
 #endif
 
 #ifndef MARS_SERVER_MAX_CONN
@@ -38,6 +38,19 @@
 
 #include <netipx/ipx.h>
 
+typedef struct mars_server_volume_dirent_t {
+    int volume;
+    uint32_t handle;
+
+    char *name;
+    char *local_path;
+    char *netware_path;
+
+    struct mars_server_volume_dirent_t *root;
+    struct mars_server_volume_dirent_t *parent;
+    struct mars_server_volume_dirent_t *next;
+} mars_server_volume_dirent_t;
+
 typedef struct mars_server_volume_t {
     int idx;
 
@@ -46,7 +59,8 @@ typedef struct mars_server_volume_t {
 
     int is_system;
 
-    struct mars_server_volume_t *next;
+    mars_server_volume_dirent_t *dirents;
+    pthread_mutex_t dirents_mtx;
 } mars_server_volume_t;
 
 typedef struct mars_server_connection_t {
@@ -61,6 +75,8 @@ typedef struct mars_server_connection_t {
 
     uint16_t packet_sz;
     uint16_t buff_sz;
+
+    mars_server_volume_dirent_t *dir_handles[16];
 } mars_server_connection_t;
 
 typedef struct mars_server_bindery_t {
@@ -87,8 +103,6 @@ typedef struct mars_server_t {
 
     void *bindery;
     void (*destroy)(struct mars_server_t *);
-
-    struct mars_server_t *next;
 } mars_server_t;
 
 int mars_server_init(void);
@@ -98,5 +112,8 @@ int mars_server_am_a(uint16_t type);
 
 mars_server_volume_t *mars_server_find_volume(char *name);
 mars_server_volume_t *mars_server_get_volume(int idx);
+
+mars_server_volume_dirent_t *mars_server_dirent_walk(mars_server_volume_t *vol, char *path);
+mars_server_volume_dirent_t *mars_server_dirent_get(mars_server_volume_t *vol, int directory);
 
 #endif

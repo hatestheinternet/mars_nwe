@@ -70,15 +70,20 @@ void mars_router_handle_sap(mars_router_sap_packet_t *packet, int len, struct so
                 printf("From: %02X%02X%02X%02X%02X%02X @ %08X\n", MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
                 printf("Server Type: %04X",ntohs(packet->entries[0].type));
             }
-            if( mars_server_am_a(ntohs(packet->entries[0].type)) ) {
-                if( dump_sap )
-                    printf(" (me)\n");
 
-                mars_router_send_sap_file_response(sipx);
-            } else if( dump_sap ) {
-                printf("\n");
+            switch(ntohs(packet->entries[0].type)) {
+                case MARS_SERVER_TYPE_DIR:
+                case MARS_SERVER_TYPE_FILE:
+                    if( dump_sap )
+                        printf(" (me)\n");
+
+                    mars_router_send_sap_file_response(sipx);
+                break;
+
+                default:
+                    printf("\n");
+                    break;
             }
-            break;
 
         default:
             fprintf(stderr,"mars_router_handle_sap: Unhandled SAP type %i\n", ntohs(packet->operation));
