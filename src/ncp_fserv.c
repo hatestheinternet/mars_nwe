@@ -85,7 +85,6 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
         }
     }
 
-    printf("%s\n", path);
     struct stat finfo;
     if( stat((char *)path, &finfo) == -1 ) {
         return -1;
@@ -206,8 +205,6 @@ int _mars_ncp_service_entry_info_path(mars_server_t *srv, mars_server_connection
     cptr = strrchr(tmp, '/');
     while( cptr ) {
         *cptr = 0;
-
-        printf("Component: %s (%lu)\n", cptr+1, strlen(cptr+1));
 
         presp->path_sz += strlen(cptr+1) + 1;
         presp->path_count++;

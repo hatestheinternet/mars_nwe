@@ -216,8 +216,7 @@ mars_server_volume_dirent_t *mars_server_dirent_walk(mars_server_volume_t *vol, 
     }
     char *dat = strdup(path), *pos=dat+strlen(path)-strlen(vol->name), *ptr;
     mars_server_volume_dirent_t *parent = NULL;
-    printf("Walk %s\n", path);
-
+    
     if( path != NULL ) {
         ptr = strchr(pos,'/');
         while( ptr ) {

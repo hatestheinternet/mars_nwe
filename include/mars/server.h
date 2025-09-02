@@ -108,7 +108,6 @@ typedef struct mars_server_t {
 int mars_server_init(void);
 int mars_server_start(void);
 void mars_server_stop(void);
-int mars_server_am_a(uint16_t type);
 
 mars_server_volume_t *mars_server_find_volume(char *name);
 mars_server_volume_t *mars_server_get_volume(int idx);
