@@ -95,7 +95,8 @@ int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *co
     mars_ncp_response_prepare(conn, &resp, sizeof(resp));
     resp.completion = MARS_NCP_SVC_UNKONWN;
 
-    printf("mars_ncp_service_burst_mode[%i]: " MARS_PRINTF_IPX_ADDR "@%08X has been refused burst mode\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network));
+    if( mars_config_is_true(mars_config_global_str("dump_ncp") ) )
+        printf("mars_ncp_service_burst_mode[%i]: " MARS_PRINTF_IPX_ADDR "@%08X has been refused burst mode\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network));
     
     mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
     return 1;

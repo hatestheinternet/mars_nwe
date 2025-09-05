@@ -148,40 +148,34 @@ int _mars_server_dirent_next_id(mars_server_volume_t *vol) {
 
 mars_server_volume_dirent_t *_mars_server_dirent_create(mars_server_volume_t *vol, char *name, mars_server_volume_dirent_t *parent) {
     mars_server_volume_dirent_t *dirent = calloc(1,sizeof(mars_server_volume_dirent_t));
-    dirent->name = strdup(name);
-
-    int path_sz = 0;
-    if( parent ) {
-        path_sz += strlen(parent->netware_path) + 1;
-        dirent->parent = parent;
-    }
-
-    path_sz += strlen(name)+1+strlen(vol->name);
-    dirent->netware_path = calloc(1,path_sz);
-
-    char *pos = dirent->netware_path;
-    memcpy(pos, vol->name, strlen(vol->name));
-    pos += strlen(vol->name);
-    *pos = '/';
-    pos++;
-
-    if( parent ) {
-        memcpy(pos, parent->netware_path, strlen(parent->netware_path));
-        pos += strlen(parent->netware_path) +1;
-        *pos = '/';
-        pos++;
-    }
-
-    snprintf(pos, path_sz-(pos-dirent->netware_path)+1, "%s", name);
+    dirent->parent = parent;
     dirent->handle = _mars_server_dirent_next_id(vol);
+
+    if( parent ) {
+        dirent->name = strdup(name);
+
+        dirent->local_path = calloc(1, strlen(parent->local_path) + strlen(name) + 2);
+        snprintf(dirent->local_path, strlen(parent->local_path) + strlen(name) + 2, "%s/%s", parent->local_path, name);
+
+        dirent->netware_path = calloc(1, strlen(parent->netware_path) + strlen(name) + 2);
+        snprintf(dirent->netware_path, strlen(parent->netware_path) + strlen(name) + 2, "%s/%s", parent->netware_path, name);
+
+    } else {
+        dirent->name = strdup(vol->name);
+        dirent->netware_path = strdup(vol->name);
+        dirent->local_path = strdup(vol->path);
+    }
     
+    dirent->ncp_dirent.vol_no = vol->idx;
+    dirent->ncp_dirent.dirent_no = dirent->handle;
+
     dirent->next = vol->dirents;
     vol->dirents = dirent;
 
     return dirent;
 }
 
-mars_server_volume_dirent_t *_mars_server_dirent_get_or_create(mars_server_volume_t *vol, char *name, mars_server_volume_dirent_t *parent) {
+mars_server_volume_dirent_t *mars_server_dirent_get_or_create(mars_server_volume_t *vol, char *name, mars_server_volume_dirent_t *parent) {
     mars_server_volume_dirent_t *dirent = NULL, *tst;
 
     tst = vol->dirents;
@@ -210,31 +204,18 @@ mars_server_volume_dirent_t *mars_server_dirent_get(mars_server_volume_t *vol, i
     return ret;
 }
 
-mars_server_volume_dirent_t *mars_server_dirent_walk(mars_server_volume_t *vol, char *path) {
-    if( path == NULL ) {
-        return _mars_server_dirent_get_or_create(vol, vol->name, NULL);
-    }
-    char *dat = strdup(path), *pos=dat+strlen(path)-strlen(vol->name), *ptr;
-    mars_server_volume_dirent_t *parent = NULL;
-    
-    if( path != NULL ) {
-        ptr = strchr(pos,'/');
-        while( ptr ) {
-            *ptr = 0;
-            printf("Parent %s\n", pos);
+mars_server_volume_dirent_t *mars_server_dirent_from_path(mars_server_volume_t *vol, char *path) {
+    mars_server_volume_dirent_t *ret = NULL;
+    mars_server_volume_dirent_t *dirent = vol->dirents;
 
-            parent = _mars_server_dirent_get_or_create(vol, pos, parent);
-            pos = ptr+1;
-
-
-            ptr = strchr(pos,'/');
+    while( dirent ) {
+        if( strcmp(dirent->netware_path, path) == 0) {
+            return dirent;
         }
-
-        parent = _mars_server_dirent_get_or_create(vol, dat, parent);
+        dirent = dirent->next;
     }
 
-    free(dat);
-    return parent;
+    return ret;
 }
 
 #pragma endregion
@@ -277,7 +258,7 @@ int mars_server_add_volume(mars_server_t *srv, mars_server_volume_t *vol) {
 
     vol->idx = idx;
     srv->volumes[idx] = vol;
-    _mars_server_dirent_get_or_create(vol, "", NULL);
+    // _mars_server_dirent_get_or_create(vol, "", NULL);
     pthread_mutex_unlock(&srv->vol_mtx);
     return idx;
 }

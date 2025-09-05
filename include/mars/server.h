@@ -38,6 +38,12 @@
 
 #include <netipx/ipx.h>
 
+typedef struct mars_server_volume_ncp_dirent_t {
+    uint32_t dirent_no;
+    uint32_t dosdir_no;
+    uint32_t vol_no;
+} mars_server_volume_ncp_dirent_t;
+
 typedef struct mars_server_volume_dirent_t {
     int volume;
     uint32_t handle;
@@ -45,6 +51,8 @@ typedef struct mars_server_volume_dirent_t {
     char *name;
     char *local_path;
     char *netware_path;
+
+    mars_server_volume_ncp_dirent_t ncp_dirent;
 
     struct mars_server_volume_dirent_t *root;
     struct mars_server_volume_dirent_t *parent;
@@ -62,6 +70,12 @@ typedef struct mars_server_volume_t {
     mars_server_volume_dirent_t *dirents;
     pthread_mutex_t dirents_mtx;
 } mars_server_volume_t;
+
+typedef struct mars_ncp_service_search_request_sequence_t {
+    uint8_t vol_no;
+    uint32_t dirent __attribute__ ((packed));
+    uint32_t sequence __attribute__ ((packed));
+} mars_ncp_service_search_request_sequence_t;
 
 typedef struct mars_server_connection_t {
     int idx;
@@ -114,5 +128,8 @@ mars_server_volume_t *mars_server_get_volume(int idx);
 
 mars_server_volume_dirent_t *mars_server_dirent_walk(mars_server_volume_t *vol, char *path);
 mars_server_volume_dirent_t *mars_server_dirent_get(mars_server_volume_t *vol, int directory);
+
+mars_server_volume_dirent_t *mars_server_dirent_get_or_create(mars_server_volume_t *vol, char *name, mars_server_volume_dirent_t *parent);
+mars_server_volume_dirent_t *mars_server_dirent_from_path(mars_server_volume_t *vol, char *path);
 
 #endif
