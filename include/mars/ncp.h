@@ -57,7 +57,7 @@ int mars_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, ui
 
 int mars_ncp_response_prepare(mars_server_connection_t *conn, void *resp, size_t sz);
 
-int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len);
+int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr_ipx *sipx);
 
 int mars_ncp_service_packet_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 int mars_ncp_service_buffer_sz(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);

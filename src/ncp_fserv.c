@@ -238,7 +238,7 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
 
 
     size_t send_sz = (ppos - ptr) + 20;
-    return mars_ncp_send(srv, ptr, send_sz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, ptr, send_sz, sipx);
     // return -1;
 }
 
@@ -414,7 +414,7 @@ int _mars_ncp_service_entry_info_search(mars_server_t *srv, mars_server_connecti
     // TODO Check sz
     send_sz += sizeof(mars_ncp_service_search_response_t);
 
-    return mars_ncp_send(srv, &dat, send_sz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, &dat, send_sz, sipx);
 }
 
 #pragma endregion
@@ -439,7 +439,7 @@ int _mars_ncp_service_entry_info_search_for(mars_server_t *srv, mars_server_conn
         mars_ncp_response_t none;
         mars_ncp_response_prepare(conn, &none, sizeof(none));
         none.completion = 0xFFU;
-        return mars_ncp_send(srv, &none, sizeof(none), (struct sockaddr *)sipx, sz);
+        return mars_ncp_send(srv, &none, sizeof(none), sipx);
 
     }
 
@@ -537,7 +537,7 @@ int _mars_ncp_service_entry_info_path(mars_server_t *srv, mars_server_connection
     memcpy(ptr+1, vol->name, strlen(vol->name)&0xFF);
 
     size_t resp_sendsz = sizeof(mars_ncp_service_path_response_t) + presp->path_sz;
-    int ret = mars_ncp_send(srv, presp, resp_sendsz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    int ret = mars_ncp_send(srv, presp, resp_sendsz, sipx);
     free(tmp);
     return ret;
 }

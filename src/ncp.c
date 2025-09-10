@@ -108,10 +108,10 @@ int mars_ncp_response_prepare(mars_server_connection_t *conn, void *mem, size_t 
     return 1;
 }
 
-int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr *saddr, socklen_t len) {
+int mars_ncp_send(mars_server_t *srv, void *buff, size_t sz, struct sockaddr_ipx *sipx) {
     pthread_mutex_lock(&srv->send_mtx);
 
-    int res = sendto(srv->fd, buff, sz, 0, saddr, len);
+    int res = sendto(srv->fd, buff, sz, 0, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
 
     if( res < 0 )
         res = errno;

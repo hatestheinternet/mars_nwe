@@ -88,7 +88,7 @@ int mars_nds_server_addr(mars_server_t *srv, mars_server_connection_t *conn, str
     resp->frag_handle = req->frag_handle;
     resp->frag_sz = send_sz - sizeof(mars_nds_server_addr_response_t);
 
-    return mars_ncp_send(srv, resp, send_sz, (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, resp, send_sz, sipx);
 }
 
 #pragma endregion
@@ -125,7 +125,7 @@ int mars_nds_ping(mars_server_t *srv, mars_server_connection_t *conn, struct soc
     char *org = mars_config_global_str("organization");
     memcpy(&resp.nds_tree, org, strlen(org));
 
-    return mars_ncp_send(srv, &resp, sizeof(mars_nds_ping_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, &resp, sizeof(mars_nds_ping_response_t), sipx);
 }
 
 #pragma endregion
@@ -148,6 +148,6 @@ int mars_nds_handle(mars_server_t *srv, mars_server_connection_t *conn, struct s
 
     printf("frag sz %u, msg sz %u, verb %u\n", req->frag_sz, req->message_sz, req->verb);
     
-    mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), sipx);
     return 1;
 }

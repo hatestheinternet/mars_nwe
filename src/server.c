@@ -44,7 +44,7 @@ int mars_ncp_service_date_time(mars_server_t *srv, mars_server_connection_t *con
     resp.seconds = tm->tm_sec;
     resp.dow = tm->tm_wday;
 
-    return mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_date_time_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_date_time_response_t), sipx);
 }
 
 #pragma endregion
@@ -115,7 +115,7 @@ int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *co
             if( mars_config_is_true(mars_config_global_str("dump_ncp")) ) {
                 printf("mars_ncp_service_fserv_info[%i]: " MARS_PRINTF_IPX_ADDR "@%08X requested file server info\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, ntohl(sipx->sipx_network));
             }
-            mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_fserv_info_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+            mars_ncp_send(srv, &resp, sizeof(mars_ncp_service_fserv_info_response_t), sipx);
             break;
 
         default:

@@ -59,7 +59,7 @@ int _mars_ncp_dir_volume_info_with_handle(mars_server_t *srv, mars_server_connec
     resp.clusters_avail = bytes_avail & 0xFFFF;
     memcpy(&resp.vol_name, vol->name, strlen(vol->name)>15?15:strlen(vol->name));
 
-    return mars_ncp_send(srv, &resp, sizeof(resp), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    return mars_ncp_send(srv, &resp, sizeof(resp), sipx);
 }
 
 #pragma endregion

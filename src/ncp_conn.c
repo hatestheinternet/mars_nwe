@@ -38,7 +38,7 @@ int mars_ncp_service_buffer_sz(mars_server_t *srv, mars_server_connection_t *con
         printf("mars_ncp_service_buffer_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set buffer size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->buff_sz);
     }
 
-    mars_ncp_send(srv, &resp, sizeof(mars_ncp_buffer_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_buffer_size_response_t), sipx);
     return 1;
 }
 
@@ -79,7 +79,7 @@ int mars_ncp_service_packet_sz(mars_server_t *srv, mars_server_connection_t *con
         printf("mars_ncp_service_packet_sz[%i]: " MARS_PRINTF_IPX_ADDR "@%08X set packet size to %hu\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network), conn->packet_sz);
     }
 
-    mars_ncp_send(srv, &resp, sizeof(mars_ncp_packet_size_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_packet_size_response_t), sipx);
     return 1;
 }
 
@@ -98,7 +98,7 @@ int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *co
     if( mars_config_is_true(mars_config_global_str("dump_ncp") ) )
         printf("mars_ncp_service_burst_mode[%i]: " MARS_PRINTF_IPX_ADDR "@%08X has been refused burst mode\n", conn->idx, MARS_PRINTF_SIPXP_ADDR, htonl(sipx->sipx_network));
     
-    mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    mars_ncp_send(srv, &resp, sizeof(mars_ncp_response_t), sipx);
     return 1;
 }
 
@@ -149,7 +149,7 @@ int mars_ncp_create_connection(mars_server_t *srv, struct sockaddr_ipx *sipx, ui
     conn->idx = idx;
 
     mars_ncp_response_prepare(conn, &resp, sizeof(resp));
-    res = mars_ncp_send(srv, (void *)&resp, sizeof(resp), (struct sockaddr *)sipx, sizeof(struct sockaddr_ipx));
+    res = mars_ncp_send(srv, (void *)&resp, sizeof(resp), sipx);
     if( res < 0 ) {
         fprintf(stderr, "mars_ncp_create_connection: %s\n", strerror(res));
         srv->connections[--idx] = NULL;
