@@ -39,9 +39,9 @@
 #include <netipx/ipx.h>
 
 typedef struct mars_server_volume_ncp_dirent_t {
-    uint32_t dirent_no;
-    uint32_t dosdir_no;
-    uint32_t vol_no;
+    uint32_t dirent_no __attribute__ ((packed));
+    uint32_t dosdir_no __attribute__ ((packed));
+    uint32_t vol_no __attribute__ ((packed));
 } mars_server_volume_ncp_dirent_t;
 
 typedef struct mars_server_volume_dirent_t {

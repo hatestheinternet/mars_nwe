@@ -7,6 +7,7 @@
 #define MARS_NCP_OP_SVC_RESP 0x3333U
 
 #define MARS_NCP_SVC_DATE_TIME 0x14U
+#define MARS_NCP_SVC_DIRECTORY 0x16U
 #define MARS_NCP_SVC_FSERV_INFO 0x17U
 #define MARS_NCP_SVC_ENTRY_INFO 0x57U
 #define MARS_NCP_SVC_PACKET_SZ 0x61U
@@ -15,6 +16,7 @@
 
 #define MARS_NCP_NDS_SERVER_ADDR 0x68U
 
+#define MARS_NCP_SVC_ENTRY_SEARCH_FOR 0x03U
 #define MARS_NCP_SVC_ENTRY_INFO_FOR 0x06U
 #define MARS_NCP_SVC_ENTRY_INFO_PATH 0x1CU
 #define MARS_NCP_SVC_ENTRY_INFO_SEARCH 0x14U
@@ -63,5 +65,6 @@ int mars_ncp_service_burst_mode(mars_server_t *srv, mars_server_connection_t *co
 int mars_ncp_service_fserv_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 int mars_ncp_service_entry_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 int mars_ncp_service_date_time(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
+int mars_ncp_service_directory(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz);
 
 #endif

@@ -12,6 +12,7 @@ SRCS=src/mars_minwe.c \
 	src/ncp_conn.c \
 	src/ncp_svc.c \
 	src/ncp_fserv.c \
+	src/ncp_dir.c \
 	src/nds.c
 OBJS=$(patsubst %.c, %.o, $(SRCS))
 

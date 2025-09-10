@@ -135,7 +135,7 @@ int _mars_server_dirent_next_id(mars_server_volume_t *vol) {
     uint32_t max_id = 0;
 
     if( !tst )
-        return 0;
+        return 1;
 
     while( tst ) {
         if( tst->handle > max_id )
@@ -168,6 +168,7 @@ mars_server_volume_dirent_t *_mars_server_dirent_create(mars_server_volume_t *vo
     
     dirent->ncp_dirent.vol_no = vol->idx;
     dirent->ncp_dirent.dirent_no = dirent->handle;
+    dirent->ncp_dirent.dosdir_no = dirent->handle;
 
     dirent->next = vol->dirents;
     vol->dirents = dirent;

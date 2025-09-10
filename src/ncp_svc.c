@@ -78,6 +78,11 @@ int mars_ncp_handle(mars_server_t *srv, struct sockaddr_ipx *sipx, uint8_t *buff
                 conn->seq_no = req->req.sequence;
                 ret = mars_ncp_service_date_time(srv, conn, sipx, buff, sz);
                 break;
+
+            case MARS_NCP_SVC_DIRECTORY:
+                conn->seq_no = req->req.sequence;
+                ret = mars_ncp_service_directory(srv, conn, sipx, buff, sz);
+                break;
         }
 
     }
