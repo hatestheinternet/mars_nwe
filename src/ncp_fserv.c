@@ -184,11 +184,15 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
                 ppos++;
                 
                 memcpy(ppos, ptr+1, pe_sz);
+            } else {
+                memcpy(&path, dirent->parent->netware_path, strlen(dirent->parent->netware_path));
+                ppos = path+strlen(dirent->parent->netware_path);
+                *ppos = 0;
             }
             ptr += pe_sz + 1;
         }
     }
-
+    
     mars_server_vfs_entry_t vfs;
     
     // TODO not found?
