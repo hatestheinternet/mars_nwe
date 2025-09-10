@@ -19,7 +19,7 @@ typedef enum mars_ncp_entry_search_e {
     NCP_SEARCH_WANT_DIR = 16
 } mars_ncp_entry_search_e;
 
-#pragma region Function 0x57:0x06 - File or sub directory info
+#pragma region Function 0x57:0x06 - Obtain info for
 
 typedef struct mars_ncp_service_entry_request_t {
     mars_ncp_service_request_t req;
@@ -128,6 +128,7 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
     uint8_t *ptr;
     ptr = buff + sizeof(mars_ncp_service_entry_request_t);
     unsigned char *ppos = path;
+    int pos_adjust = 1;
     
     memset(&vol_name, 0, sizeof(vol_name));
     memset(&path, 0, sizeof(path));
@@ -136,7 +137,7 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
 
     if( req->vol_no != 255U ) {
         vol = mars_server_get_volume(req->vol_no);
-        ptr++;
+        pos_adjust = 0;
     } else {
         ptr++;
 
@@ -163,7 +164,7 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
         switch( req->handle_flag ) {
             case 0x01:
                 dirent = mars_server_dirent_get(vol, req->dir_base);
-                dirent = dirent->parent;
+                // dirent = dirent->parent;
                 if( !dirent ) {
                     fprintf(stderr, "Unable to get dirent for dir_base %u\n", req->dir_base);
                     return 0;
@@ -174,8 +175,8 @@ int _mars_ncp_service_entry_info_for(mars_server_t *srv, mars_server_connection_
         }
     }
 
-    if( req->path_count > 1 ) {
-        for( int i=0; i<req->path_count-1; i++ ) {
+    if( req->path_count > pos_adjust ) {
+        for( int i=0; i<req->path_count-pos_adjust; i++ ) {
             pe_sz = *ptr;
 
             if( pe_sz != 0 ) {
@@ -432,17 +433,32 @@ typedef struct mars_ncp_service_search_for_request_t {
     uint8_t pattern_sz;
 } mars_ncp_service_search_for_request_t;
 
+int _mars_ncp_service_entry_info_search_glob(void) {
+    return 0;
+}
+
 int _mars_ncp_service_entry_info_search_for(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
     mars_ncp_service_search_for_request_t *req = (mars_ncp_service_search_for_request_t *)buff;
+    mars_server_volume_t *vol;
+    mars_server_volume_dirent_t *dirent;
+    char *pattern;
     
     if( req->pattern_sz == 0 ) {
         mars_ncp_response_t none;
         mars_ncp_response_prepare(conn, &none, sizeof(none));
         none.completion = 0xFFU;
         return mars_ncp_send(srv, &none, sizeof(none), sipx);
-
     }
 
+    vol = mars_server_get_volume(req->seq.vol_no);
+    dirent = mars_server_dirent_get(vol, req->seq.dirent);
+
+    pattern = calloc(1,req->pattern_sz+1);
+    memcpy(pattern, req+sizeof(mars_ncp_service_search_for_request_t), req->pattern_sz);
+
+    printf("Search for %s in %s\n", pattern, dirent->local_path);
+
+    free(pattern);
     return _mars_ncp_service_entry_info_search(srv, conn, sipx, buff, sz, NULL);
 }
 
@@ -544,6 +560,37 @@ int _mars_ncp_service_entry_info_path(mars_server_t *srv, mars_server_connection
 
 #pragma endregion
 
+#pragma region Function 0x57:0x09 - Set Short Directory Handle
+
+typedef struct mars_ncp_service_set_short_dir_handle_request_t {
+    mars_ncp_service_request_t req;
+    uint8_t sub_func;
+    uint8_t namespace;
+    uint8_t datastream;
+    uint8_t destination;
+    uint8_t reserved;
+    uint8_t volume;
+    uint32_t directory __attribute__ ((packed));
+    uint8_t handle_flag;
+    uint8_t path_sz;
+} mars_ncp_service_set_short_dir_handle_request_t;
+
+int _mars_ncp_service_set_dir_short_handle(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
+    mars_ncp_service_set_short_dir_handle_request_t *req = (mars_ncp_service_set_short_dir_handle_request_t *)buff;
+    mars_server_volume_t *vol = mars_server_get_volume(req->volume);
+    mars_server_volume_dirent_t *dirent = mars_server_dirent_get(vol, req->directory);
+
+    uint8_t dat[8192];
+    mars_ncp_response_t *resp = (mars_ncp_response_t *)&dat;
+    mars_ncp_response_prepare(conn, resp, sizeof(dat));
+    
+    conn->dir_handles[req->destination] = dirent;
+
+    return mars_ncp_send(srv, &dat, sizeof(mars_ncp_response_t), sipx);
+}
+
+#pragma endregion
+
 int mars_ncp_service_entry_info(mars_server_t *srv, mars_server_connection_t *conn, struct sockaddr_ipx *sipx, uint8_t *buff, int sz) {
     mars_ncp_service_entry_request_t *req = (mars_ncp_service_entry_request_t *)buff;
     
@@ -563,6 +610,10 @@ int mars_ncp_service_entry_info(mars_server_t *srv, mars_server_connection_t *co
 
         case MARS_NCP_SVC_ENTRY_SEARCH_FOR:
             return _mars_ncp_service_entry_info_search_for(srv, conn, sipx, buff, sz);
+            break;
+
+        case 0x09U:
+            return _mars_ncp_service_set_dir_short_handle(srv, conn, sipx, buff, sz);
             break;
     }
 
